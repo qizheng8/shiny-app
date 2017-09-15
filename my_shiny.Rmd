@@ -1,0 +1,86 @@
+---
+title: "Shiny App"
+author: "qi"
+date: "2017/9/8"
+output: ioslides_presentation
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introduction
+
+**dataset:**  
+mtcars was collected from the 1974 Motor Trend US magzine, which contains fuel consumption mpg (miles/us gallon) and other 10 variables for 32 automabiles.
+
+**variable:**  
+mpg: miles/(us) gallon  
+wt: weight (1000 lbs)
+
+**app application:**   
+fit the data and predict mpg with wt
+
+## Dataset "mtcars" 
+
+```{r, echo = F}
+head(mtcars)
+```
+
+## Plot of "mpg" Vs "wt"
+
+```{r, echo=FALSE}
+library(ggplot2)
+library(shiny)
+x <- ggplot(mtcars, aes(x=wt, y=mpg, color=mpg)) + geom_point() + scale_color_gradientn(colours = rainbow(5))
+x
+```
+
+## Shiny App
+
+```{r, echo = FALSE}
+library(shiny)
+library(ggplot2)
+shinyApp(
+  
+  ui = fluidPage(
+     # Application title
+  titlePanel("mpg vs wt"),
+  
+  # Sidebar with a slider input for number of bins 
+  sidebarLayout(
+    sidebarPanel(
+       sliderInput("bins",
+                   "wt:",
+                   min = 1,
+                   max = 5,
+                   value = 2)
+    ),
+    
+    # Show a plot of the generated distribution
+    mainPanel(
+       plotOutput("distPlot")
+    )
+  )
+  ),
+  
+  server = function(input, output) {
+    output$distPlot <- renderPlot({
+        # generate bins based on input$bins from ui.R
+          data(mtcars)
+          fit <- lm(mpg ~ wt, data = mtcars)
+          bins <- seq(min(mtcars$wt), max(mtcars$wt), length.out = input$bins + 1)
+          y <- (input$bins) * (fit$coefficients[2]) + fit$coefficients[1]
+          
+    # draw the plot with the specified number of bins
+          ggplot(mtcars, aes(x=wt, y=mpg)) +
+                  geom_point(shape=1) +    # Use hollow circles
+                  geom_smooth(method=lm,   # Add linear regression line
+                              se=FALSE) + geom_point(aes(x = input$bins, y = y), color="red") 
+
+   })
+  }
+)
+```
+
