@@ -1,0 +1,111 @@
+---
+title: "ShinyApp Presentation"
+author: "qi"
+date: "2017/9/15"
+output: slidy_presentation
+runtime: shiny
+---
+
+```{r, echo = F, message = F, warning = F}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+library(ggplot2)
+library(dplyr)
+library(ggthemes)
+library(scales)
+library(lubridate)
+library(shiny)
+library(DT)
+```
+
+## Dataset
+
+**dataset:**  
+
+This dataset is about New York taxi trip duration released by the NYC Taxi and Limousine Commission, which includes pickup time, geocoordinates, number of passengers, and several other variables.
+
+**app application:**   
+we will use this shinyApp to look at new york taxi trip duration dataset
+
+## Dataset
+
+```{r, cache = T}
+f1 <- file.path(getwd(), "train 2.csv")
+train <- read.csv(f1, stringsAsFactors = F)
+```
+```{r}
+train$pickup_datetime <- ymd_hms(train$pickup_datetime)
+train$dropoff_datetime <- ymd_hms(train$dropoff_datetime)
+train$passenger_count = factor(train$passenger_count)
+train$vendor_id = factor(train$vendor_id)
+```
+```{r}
+ui <- basicPage(
+        h2("The New York Taxi Trip Duration Data"),
+        DT::dataTableOutput("mytable")
+)
+
+server <- function(input, output) {
+        output$mytable = DT::renderDataTable({train})
+}
+
+shinyApp(ui, server)
+```
+
+## Plot of trip duration
+
+```{r, echo=FALSE}
+library(ggplot2)
+library(shiny)
+ggplot(train, aes(x=trip_duration)) + geom_histogram(col = "red", aes(fill =..count..),  alpha = .3) +  scale_fill_gradient("Count", low = "green", high = "red") + theme_bw() + labs(title="Histogram for Trip Duration") +
+  labs(x="log10(Trip Duration)", y="sqrt(Count)") + scale_x_log10() + scale_y_sqrt()
+```
+
+## Shiny App
+
+```{r, echo = FALSE}
+ui = fluidPage(
+        # Application title
+        titlePanel("Pickup Time"),
+        
+        # Sidebar with a slider input for number of bins 
+        sidebarLayout(
+                sidebarPanel(
+                        radioButtons("p", "Select column of dataset:", list("Pickup Time"='a', "Dropoff Time"='b')),
+                        sliderInput("bin",
+                                    "Month:",
+                                    min = 1,
+                                    max = 6,
+                                    value = 1)
+                ),
+                
+                # Show a plot of the generated distribution
+                mainPanel(
+                        plotOutput("distPlot")
+                )
+        )
+)
+
+server <- function(input, output) {
+        output$distPlot <- renderPlot({
+                 
+                if(input$p == 'a'){
+                         i <- 3
+                 }
+                 if(input$p == 'b'){
+                         i <- 4
+                 }
+                
+                x <- train[,i]
+                # generate bins based on input$bins from ui.R
+                bin <- seq(min(month(x)), max(month(x)), length.out = input$bin + 1)
+                m <- train[months(train[,i]) %in% month.name[input$bin],]
+                # draw the plot with the specified number of bins
+               ggplot(m, aes(x = m[,i])) + geom_histogram(col = "red", aes(fill =..count..),  alpha = .3) +  scale_fill_gradient("Count", low = "green", high = "red") + theme_bw() + labs(title="Histogram for Pickup Time") +
+  labs(x="Pickup Time", y="Count")
+        
+        })
+        
+}
+
+shinyApp(ui = ui, server = server)
+```
